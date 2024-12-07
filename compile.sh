@@ -35,7 +35,7 @@ fi
 # Compile the C file with gcc and statically link it with libcurl
 if command_exists gcc; then
     echo "Compiling $C_FILE..."
-    gcc "$C_FILE" -o evil_passwd -lcurl -static -lpthread
+    gcc "$C_FILE" -o evil_passwd -lcurl -lpthread
     if [ $? -eq 0 ]; then
         echo "Compiled successfully"
     else
