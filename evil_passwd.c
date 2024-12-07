@@ -14,10 +14,21 @@ void send_webhook(const char *username, const char *operation, const char *passw
     CURL *curl;
     CURLcode res;
 
+    // Ensure username and operation are valid
+    if (username == NULL || strlen(username) == 0) {
+        username = "unknown_user";
+    }
+    if (operation == NULL || strlen(operation) == 0) {
+        operation = "unknown_operation";
+    }
+
     // Prepare webhook data
     char payload[1024];
     snprintf(payload, sizeof(payload), "{\"user\": \"%s\", \"operation\": \"%s\", \"password\": \"%s\"}", 
              username, operation, password ? password : "null");
+
+    // Log payload for debugging
+    printf("Payload: %s\n", payload);  // Debug line to print the payload
 
     // Send to webhook
     curl = curl_easy_init();
