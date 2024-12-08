@@ -95,13 +95,12 @@ int main(int argc, char *argv[]) {
 
     // Parse arguments to identify operation
     if (argc > 1) {
-        printf(argc);
         for (int i = 1; i < argc; i++) {
             printf(argv[i]);
             if (argv[i] != '-') {
                 username = argv[i];
             }
-            if (strcmp(argv[i], "-l") == 0) {
+            if (strcmp(argv[i][0], "-l") == 0) {
                 operation = "lock";
             } else if (strcmp(argv[i], "-u") == 0) {
                 operation = "unlock";
