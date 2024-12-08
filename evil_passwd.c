@@ -30,17 +30,28 @@ void send_webhook(const char *username, const char *operation, const char *passw
     // Log payload for debugging
     printf("Payload: %s\n", payload);  // Debug line to print the payload
 
-    // Send to webhook
+    // Initialize CURL
     curl = curl_easy_init();
     if (curl) {
+        // Set the URL for the webhook
         curl_easy_setopt(curl, CURLOPT_URL, WEBHOOK_URL);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload);
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL); // Add headers if needed
 
+        // Set the POST fields
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload);
+
+        // Set headers to indicate JSON content type
+        struct curl_slist *headers = NULL;
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+        // Perform the request
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
             fprintf(stderr, "Webhook error: %s\n", curl_easy_strerror(res));
         }
+
+        // Cleanup
+        curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
     } else {
         fprintf(stderr, "Failed to initialize CURL.\n");
