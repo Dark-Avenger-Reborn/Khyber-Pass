@@ -166,7 +166,7 @@ int main(int argc, char *argv[]) {
             if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
                 char error_text[256];
                 strerror_r(WEXITSTATUS(status), error_text, sizeof(error_text));
-                printf(error_text);
+                printf("%s\n", error_text);
             }
             close(master_fd);
         } else {
