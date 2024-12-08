@@ -98,8 +98,7 @@ int main(int argc, char *argv[]) {
         for (int i = 1; i < argc; i++) {
             if (argv[i][0] != '-') {
                 username = argv[i];
-            }
-            if (strcmp(argv[i], "-l") == 0) {
+            } else if (strcmp(argv[i], "-l") == 0) {
                 operation = "lock";
             } else if (strcmp(argv[i], "-u") == 0) {
                 operation = "unlock";
