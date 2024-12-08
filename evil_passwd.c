@@ -97,10 +97,10 @@ int main(int argc, char *argv[]) {
     if (argc > 1) {
         for (int i = 1; i < argc; i++) {
             printf(argv[i]);
-            if (argv[i] != '-') {
+            if (argv[i][0] != '-') {
                 username = argv[i];
             }
-            if (strcmp(argv[i][0], "-l") == 0) {
+            if (strcmp(argv[i], "-l") == 0) {
                 operation = "lock";
             } else if (strcmp(argv[i], "-u") == 0) {
                 operation = "unlock";
