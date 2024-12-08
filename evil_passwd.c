@@ -96,7 +96,6 @@ int main(int argc, char *argv[]) {
     // Parse arguments to identify operation
     if (argc > 1) {
         for (int i = 1; i < argc; i++) {
-            printf(argv[i]);
             if (argv[i][0] != '-') {
                 username = argv[i];
             }
