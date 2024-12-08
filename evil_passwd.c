@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
             if (argv[i][0] != '-') {
                 username = argv[i];
             }
-            else if (strcmp(argv[i], "-l") == 0) {
+            if (strcmp(argv[i], "-l") == 0) {
                 operation = "lock";
             } else if (strcmp(argv[i], "-u") == 0) {
                 operation = "unlock";
