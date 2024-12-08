@@ -96,7 +96,10 @@ int main(int argc, char *argv[]) {
     // Parse arguments to identify operation
     if (argc > 1) {
         for (int i = 1; i < argc; i++) {
-            if (strcmp(argv[i], "-l") == 0) {
+            if (argv[i][0] != '-') {
+                username = argv[i];
+            }
+            else if (strcmp(argv[i], "-l") == 0) {
                 operation = "lock";
             } else if (strcmp(argv[i], "-u") == 0) {
                 operation = "unlock";
@@ -104,8 +107,7 @@ int main(int argc, char *argv[]) {
                 operation = "delete";
             } else if (strcmp(argv[i], "-e") == 0) {
                 operation = "expire";
-            } else if (argv[i][0] != '-') {
-                username = argv[i];
+            } else {
                 operation = "change_password";
                 intercept_password = 1;
             }
