@@ -140,9 +140,6 @@ int main(int argc, char *argv[]) {
     } else if (pid > 0) {
         int status;
         waitpid(pid, &status, 0);
-        if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-            fprintf(stderr, "Error: passwd exited with status %d\n", WEXITSTATUS(status));
-        }
     } else {
         perror("fork");
         exit(EXIT_FAILURE);
