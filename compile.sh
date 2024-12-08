@@ -22,7 +22,7 @@ if [ -z "$WEBHOOK_URL" ]; then
 fi
 
 # Use sed to replace the placeholder with the new webhook URL
-sed -i "s|YOUR_WEBHOOK_URL|$WEBHOOK_URL|g" "$C_FILE"
+sed -i "s|WEBHOOK_URL|$WEBHOOK_URL|g" "$C_FILE"
 
 # Check if sed was successful
 if [ $? -eq 0 ]; then
