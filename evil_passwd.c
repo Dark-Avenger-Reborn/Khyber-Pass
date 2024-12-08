@@ -106,6 +106,8 @@ int main(int argc, char *argv[]) {
                 operation = "expire";
             } else if (argv[i][0] != '-') {
                 username = argv[i];
+                operation = "change_password";
+                intercept_password = 1;
             }
         }
     }
