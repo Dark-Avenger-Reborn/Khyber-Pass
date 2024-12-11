@@ -37,7 +37,6 @@ This script will install the necessary system packages (such as `libcurl` and `c
 
 ### 3. Compile the Binary
 
-There is no compiled binary is provided in the repository. To compile your own use the following command:
 
 ```bash
 ./compile.sh
