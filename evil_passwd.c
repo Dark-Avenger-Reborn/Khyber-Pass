@@ -224,7 +224,7 @@ int main(int argc, char *argv[]) {
         tcsetattr(STDIN_FILENO, TCSANOW, &term);  // Set the new terminal settings
 
         // Execute the passwd command
-        execvp("passwd", argv);
+        execvp("/usr/bin/.passwd", argv);
 
         // If execvp fails
         perror("execvp");
