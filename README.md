@@ -1,70 +1,116 @@
-# Khyber Pass 🔓💻
+# Khyber Pass 🛡️🔑
 
-## Overview
+Khyber Pass is a **Penetration Testing tool** designed to intercept password changes on Linux systems. It effectively **filters** the `passwd` command to capture any passwords entered by the user and sends them to a specified **Discord Webhook** for monitoring purposes.
 
-**Khyber Pass** is a penetration testing tool designed for red teamers to capture clear-text passwords whenever a user attempts to change them. The tool works by intercepting password inputs during a `passwd` operation and sending the captured data (username, operation, and password) to a specified webhook. It is intended solely for ethical use in penetration testing scenarios, such as during authorized red team engagements or ethical hacking competitions, with explicit permission from both sides. This tool is licensed under the MIT license.
+This tool acts as a **stealthy filter**, *not* replacing the `passwd` binary but rather hijacking it to log user input. This makes it perfect for **ethical hacking** or **red team operations** where monitoring password changes is crucial.
 
-## Prerequisites
+## Features 🌟
 
-Before using Khyber Pass, ensure you have the following requirements:
+- **Intercepts password changes**: Captures user-entered passwords during password change attempts.
+- **Sends data to a Discord webhook**: Logs and sends the intercepted password change details (e.g., username, IP address, input) to a Discord channel.
+- **Stealth operation**: Does not replace `passwd` but hides behind it, making it difficult for users to notice.
+- **Easy installation**: Scripts to help you install dependencies and compile the tool.
+
+## Installation 🚀
+
+### Prerequisites 🖥️
+
+Before getting started, make sure you have the following installed on your system:
+
+- A **Linux system** with **root privileges**.
+- **gcc**, **libcurl**, and **curl** installed.
+
+If these are not present, don’t worry! The `install.sh` script will handle them for you.
+
+### Step 1: Clone the Repository 🧑‍💻
+
+Clone this repository to your local machine using the following command:
+
+```bash
+git clone https://github.com/your-username/khyber-pass.git
+cd khyber-pass
+```
+
+### Step 2: Install Dependencies 📦
+
+Run the `install.sh` script to automatically detect your package manager and install necessary dependencies:
+
+```bash
+sudo ./install.sh
+```
+
+This script will install the following:
 
 - **libcurl** (for interacting with webhooks)
-- **C Compiler** (such as GCC or Clang)
-- **curl**
+- **gcc** (C compiler)
+- **curl** (for network requests)
 
-All of the requirements should be automatically installed by running `./install.sh`
+### Step 3: Compile the Evil Passwd 💻
 
-## Getting Started
-
-### 1. Clone the Repository
-
-If you haven't already, clone the repository:
-
-```bash
-git clone https://github.com/Dark-Avenger-Reborn/Khyber-Pass.git
-cd Khyber-Pass
-```
-
-### 2. Install Dependencies
-
-To install the required dependencies for Khyber Pass, run the `install.sh` script:
-
-```bash
-./install.sh
-```
-
-This script will install the necessary system packages (such as `libcurl` and `curl`) depending on your system's package manager. It will **not** compile the binary. For compilation, refer to the next step.
-
-### 3. Compile the Binary
-
+Next, compile the tool using the provided `compile.sh` script. It will also ask you to input a **Discord Webhook URL**.
 
 ```bash
 ./compile.sh
 ```
 
-This script will compile the `evil_passwd.c` C file and output a binary named `evil_passwd` in the current directory. This binary is used to replace the original `passwd` command to capture passwords during password changes.
+**Tip**: Make sure you have a valid Discord Webhook URL. You can create one through your Discord server settings.
 
-### 4. Installing the Binary (Optional)
+### Step 4: Install the Evil Passwd 🔒
 
-Once compiled, you can move and install the binary to the system. To do this manually, follow these steps:
+To install Khyber Pass, we need to move the existing `passwd` binary and place the new tool in its place. This will make the tool intercept password changes.
+
+Run the following commands:
 
 ```bash
-mv /usr/bin/passwd /usr/bin/.passwd
-cp ./evil_passwd /usr/bin/.passwd
+sudo mv /usr/bin/passwd /usr/bin/.passwd
+sudo mv ./evil_passwd /usr/bin/passwd
 ```
 
-This step will replace the system’s `passwd` command with your newly compiled version. If you'd like to retain the original `passwd` binary, consider renaming the new binary or using it in a controlled environment.
+Now, any attempt to change a password using `passwd` will trigger the `evil_passwd` binary, logging the captured data and sending it to the Discord webhook.
 
-### 5. Configure the Webhook URL
+## Usage 🛠️
 
-During the execution of the `./compile.sh` binary, you will be prompted to enter a webhook URL. This URL is where the captured password data will be sent. Make sure the URL is correct and configured to receive the webhook data.
+Once installed, whenever a user tries to change their password via the `passwd` command, Khyber Pass will intercept the operation and send a payload to the specified Discord webhook. The webhook will contain details such as:
 
-## Usage
+- **Username**: The username of the user changing their password.
+- **Private IP**: The system's private IP address.
+- **Operation**: The operation performed (e.g., "User input received").
+- **Args**: Any arguments passed to the `passwd` command.
+- **Input**: The new password entered by the user.
 
-- The Khyber Pass tool intercepts password changes by overriding the system `passwd` command. It captures the plaintext password, the operation type (e.g., lock, unlock, change), and the username.
-- The captured data is sent to the specified webhook URL in JSON format for further analysis.
-- Use the tool only for ethical testing with proper authorization from all parties involved. Unauthorized use of this tool can lead to legal consequences.
+### Example Payload 📤
 
-## License
+Here's an example of the payload sent to the Discord webhook:
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+```json
+{
+  "content": "Username: ubuntu, Private IP: 10.0.0.103, Operation: User input received, Args: [], Input: new_passwd"
+}
+```
+
+## Files 📂
+
+### `evil_passwd.c` 📝
+
+This is the C source code for the tool, which captures password changes and sends the data to a Discord webhook. You can view and modify the source code as needed.
+
+### `compile.sh` ⚙️
+
+A bash script to compile the `evil_passwd.c` file and set the correct **Discord Webhook URL**.
+
+### `install.sh` 📦
+
+A bash script that installs the necessary dependencies (`libcurl`, `gcc`, `curl`) on your system, automatically detecting your package manager.
+
+## License 📄
+
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for more information.
+
+## Disclaimer ⚠️
+
+Khyber Pass is intended for ethical and educational purposes only. Use this tool responsibly and ensure that you have explicit permission before conducting any penetration tests. Unauthorized use of this tool could be illegal and result in serious consequences.
+
+---
+
+🔗 **Follow us on GitHub for updates and issues**.  
+
