@@ -47,4 +47,6 @@ else
     exit 1
 fi
 
+sed -i "s|$WEBHOOK_URL|YOUR_WEBHOOK_URL|g" "$C_FILE"
+
 echo "Finished successfully"
