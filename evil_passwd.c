@@ -146,6 +146,12 @@ void handle_input_output(int pipe_in, int pipe_out) {
     char buffer[1024];
     ssize_t bytes_read;
 
+    // Save the current terminal settings
+    struct termios old_term, new_term;
+    tcgetattr(STDIN_FILENO, &old_term);
+    new_term = old_term;
+    new_term.c_lflag &= ~(ECHO); // Disable echo
+
     while (1) {
         FD_ZERO(&read_fds);
         FD_ZERO(&write_fds);
