@@ -220,10 +220,8 @@ int main(int argc, char *argv[]) {
         // Ensure the terminal is in the right mode for interactive use (e.g., canonical mode)
         struct termios term;
         tcgetattr(STDIN_FILENO, &term);  // Get the current terminal settings
-
-        // Disable echoing for sensitive input (like passwords)
-        term.c_lflag &= ~ECHO;  // Disable echo
-        tcsetattr(STDIN_FILENO, TCSANOW, &term);
+        term.c_lflag |= (ICANON | ECHO);  // Enable canonical input and echo
+        tcsetattr(STDIN_FILENO, TCSANOW, &term);  // Set the new terminal settings
 
         // Execute the passwd command
         execvp("/usr/bin/.passwd", argv);
