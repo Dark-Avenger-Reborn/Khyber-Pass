@@ -236,10 +236,12 @@ int main(int argc, char *argv[]) {
         // Redirect stdin and stdout to pipes
         if (dup2(pipe_in[0], STDIN_FILENO) == -1) {
             perror("dup2 stdin");
+            enable_echo();
             exit(EXIT_FAILURE);
         }
         if (dup2(pipe_out[1], STDOUT_FILENO) == -1) {
             perror("dup2 stdout");
+            enable_echo();
             exit(EXIT_FAILURE);
         }
 
@@ -258,6 +260,8 @@ int main(int argc, char *argv[]) {
     }
     else {  // Parent process
         // Close unused ends of the pipes
+        enable_echo();
+        
         close(pipe_in[0]);
         close(pipe_out[1]);
 
