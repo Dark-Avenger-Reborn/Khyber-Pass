@@ -90,6 +90,8 @@ install_dependencies() {
     install_package "curl"
   fi
 
+  install_package "libcurl4-openssl-dev"
+
   echo "Dependencies installed successfully."
 }
 
